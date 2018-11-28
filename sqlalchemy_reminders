@@ -290,3 +290,38 @@ async def post_v1_get_task(request):
         session.close()
         return {'error': error}
 
+
+### Closure table ###
+# Closure Table is designed to make graph representation easier in column oriented databases. How it works:    
+# It extends the _Base model that is empty model, and it adds three columns, one for ancestors and one for children of that ancestor and finally depth of those nodes/children. This speeds up search since you can easily join Nodes with children uid from closure table. This speed is sacrificed for more space used, but storage is cheaper than processing power, hence this is a good solution.
+
+# __table_args defines primary key, which is made of both the ancestor and children uids, that are unique.
+
+class ClosureTable(_Base):
+
+    ancestor_uid = Column(String(36))
+    children_uid = Column(String(36))
+    depth = Column(Integer, default= 0)
+    __table_args__ = (PrimaryKeyConstraint('ancestor_uid', 'children_uid') , {})    
+    
+    @classmethod
+    def add_node(cls, session, ancestor_uid, children_uid):
+        try:
+            sql = text(
+                '''
+                INSERT INTO closuretable (ancestor_uid, children_uid, depth)
+                SELECT t.ancestor_uid, :new_node_uid, t.depth+1
+                FROM closuretable AS t
+                WHERE t.children_uid = :parent_uid
+                UNION ALL SELECT :new_node_uid, :new_node_uid, 0
+                ''')
+
+            sql = sql.bindparams(new_node_uid=children_uid, parent_uid=ancestor_uid)
+
+            session.execute(sql)
+            return None
+        except Exception as e:
+            print("error",e)
+            session.rollback()
+            session.close()
+            return e        

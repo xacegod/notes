@@ -1,0 +1,146 @@
+# faster counting
+def get_count(q):
+    count_q = q.statement.with_only_columns([func.count()]).order_by(None)
+    count = q.session.execute(count_q).scalar()
+    return count
+
+# Slow: SELECT COUNT(*) FROM (SELECT ... FROM TestModel WHERE ...) ...
+print(q.count())
+
+# Fast: SELECT COUNT(*) FROM TestModel WHERE ...
+print(get_count(q))
+qry = session.query(User).filter(User.createdat>=to_date,User.createdat<from_date)
+test = get_count(qry)
+print(test)
+
+# order by
+order_by(Node.amount.desc())
+
+q = session.query(Profile).filter(Profile).order_by(...)
+
+to_date = datetime.datetime.utcnow() - datetime.timedelta(days=30)
+from_date = datetime.datetime.utcnow()
+
+q = session.query(Profile.user_uid).filter(Profile.sponsor_user_uid == token_user_data['uid']).all()
+
+new_q = [r[0] for r in q]
+
+
+
+# returns from tabel the column we pass as variable in String
+getattr(model, "column_in_string")
+
+# order by said column
+if order_by == None: 
+    q = q.order_by(Task.end_date.desc())
+elif any(u in order_by for u in ('createdat', 'title', 'number', 'begin_date', 'end_date', 'enabled', 'created_by_user', 'updated_by_user' )):
+    q = q.order_by(getattr(Task, order_by).desc())
+
+##### counts the number of times said data is repeated in database
+q = session.query(Node.uid, User.username, func.count(Node.user_uid).label('count'))
+q = q.filter(Node.user_uid == User.uid)
+q = q.group_by(Node.user_uid)
+q = q.order_by('count')
+q = q.limit(10)
+nodes_count = q.all()
+
+q = session.query(User.username, Task.user_uid, func.count(Task.user_uid).label('count'))
+q = q.filter(Task.user_uid == User.uid)
+q = q.group_by(Task.user_uid)
+q = q.order_by('count').desc()
+#q = q.order_by(User.createdat.asc())
+q = q.limit(number)
+q = q.all()
+
+# if we need slice of data returned we use this
+.slice(0, 10).all()
+
+# results that have said values
+having(func.count(Address.id) > 2)
+
+# only distinct results
+distinct(Transaction.currency)
+
+# filter by accepts kwargs
+.filter_by('name'='John')
+.filter_by(kwargs) # key word arguments
+
+# filter test if ==
+.filter(User.name == 'John')
+
+# not in ~
+query.filter(~User.name.in_(['lee', 'sonal', 'akshay']))
+
+########
+# and_
+from sqlalchemy import and_
+filter(and_(User.name == 'leela', User.fullname == 'leela dharan'))
+
+#or, default without and_ method comma separated list of conditions are AND
+filter(User.name == 'leela', User.fullname == 'leela dharan')
+
+# or call filter()/filter_by() multiple times
+filter(User.name == 'leela').filter(User.fullname == 'leela dharan')
+########
+
+#######
+# or_
+from sqlalchemy import or_
+filter(or_(User.name == 'leela', User.name == 'akshay'))
+#######
+
+###
+# match
+query.filter(User.name.match('leela'))
+###
+
+col_name = 'name'
+db_session.query(User).filter(getattr(User, col_name).like("%" + query + "%"))
+# test if it will work with the bottom one
+model_name = "User"
+db_session.query(model_name).filter(getattr(model_name, col_name).like("%" + query + "%"))
+
+# print(f'node: {node!r}')
+# print(f'closure_table: {closure_table!r}')
+
+#######
+
+# count with more things, last adds support for view 
+from sqlalchemy import func, distinct
+from sqlalchemy.orm import lazyload
+
+def get_count(q):
+    disable_group_by = False
+    if len(q._entities) > 1:
+        # currently support only one entity
+        raise Exception('only one entity is supported for get_count, got: %s' % q)
+    entity = q._entities[0]
+    if hasattr(entity, 'column'):
+        # _ColumnEntity has column attr - on case: query(Model.column)...
+        col = entity.column
+        if q._group_by and q._distinct:
+            # which query can have both?
+            raise NotImplementedError
+        if q._group_by or q._distinct:
+            col = distinct(col)
+        if q._group_by:
+            # need to disable group_by and enable distinct - we can do this because we have only 1 entity
+            disable_group_by = True
+        count_func = func.count(col)
+    else:
+        # _MapperEntity doesn't have column attr - on case: query(Model)...
+        count_func = func.count()
+    if q._group_by and not disable_group_by:
+        count_func = count_func.over(None)
+    count_q = q.options(lazyload('*')).statement.with_only_columns([count_func]).order_by(None)
+    if disable_group_by:
+        count_q = count_q.group_by(None)
+    return q.session.execute(count_q).scalar()
+
+
+    if hasattr(model_class, 'columns'):
+        q = q.filter(model_class.columns.get('uid') == model_class.columns.get('uid'))
+    else:
+        q = q.filter(getattr(model_class, 'uid') == getattr(model_class, 'uid'))
+
+#####

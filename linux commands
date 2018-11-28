@@ -1,0 +1,20 @@
+# link config file
+ln -s config-local.json config.json
+ln -s config-production.json config.json
+
+# removes cache on archlinux, should be done from time to time
+sudo rm -r /var/cache/pacman/pkg/*
+
+# archlinux commande:
+- df - disk free
+- du - disk usage
+
+df -h # shows in a way that a human may read it
+
+df --help
+
+sudo pacman -Sy gnome-system-monitor
+
+
+ssh-keygen -t rsa -C "filip@filip-desktop" -b 4096
+cat ~/.ssh/id_rsa.pub

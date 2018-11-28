@@ -46,3 +46,28 @@ async def get_users_for_import_from(url, handshake=None):
 loop = asyncio.get_event_loop()
 loop.run_until_complete(get_users_for_import_from(url))
 #### END connection from client
+
+# defined in model ClosureTable
+    @classmethod
+    def get_nodes_from_closure_table_with_user(cls, session, node_uid):
+        q = session.query(User,Node,ClosureTable)
+        q = q.filter(Node.uid == ClosureTable.children_uid)
+        q = q.filter(Node.user_uid == User.uid)
+        q = q.filter(ClosureTable.ancestor_uid == node_uid)
+        q = q.order_by(ClosureTable.depth.asc())
+        return q.all()
+
+# called from route - api
+nodes = ClosureTable.get_nodes_from_closure_table_with_user_depth_from_to_and_plan(session, node.uid, from_depth, to_depth)
+        
+result = []
+count = len(nodes)
+for user, node, closure_table in nodes:
+
+    node_dict = node.object_to_dict()    
+    node_dict['depth'] = closure_table.depth
+    node_dict['name'] = user.username
+    del node_dict['user_uid']    
+
+    result.append(node_dict)
+return result

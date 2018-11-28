@@ -100,9 +100,6 @@ db_session.query(User).filter(getattr(User, col_name).like("%" + query + "%"))
 model_name = "User"
 db_session.query(model_name).filter(getattr(model_name, col_name).like("%" + query + "%"))
 
-# print(f'node: {node!r}')
-# print(f'closure_table: {closure_table!r}')
-
 #######
 
 # count with more things, last adds support for view 

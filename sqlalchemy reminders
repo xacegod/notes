@@ -153,3 +153,140 @@ qry = session.query(Package) \
 qry = qry.all()
 
 print(qry)
+
+
+##### 
+
+@route(app, 'POST', '/v1/get_task')
+@json_response
+async def post_v1_get_task(request):
+    data = await request.json()
+
+    token = data.get('token', None)    
+
+    if token == None: # or it not token:
+        return {'error':'no token'}
+
+    try:
+        user_dict = token_decode(token)
+        
+        session = ReadOnlySession()
+        user = session.query(User).filter(User.uid == user_dict['uid'] ).first()
+        if not user:
+            session.close()
+            return {'error':'error'}
+
+        if user_dict['logged_in'] != user.logged_in:
+            session.close()
+            return {'error':'signed in already'}
+
+        now = datetime.datetime.utcnow()
+        yesterday = get_yesterday() # fucntion for today - 1 day
+        
+        day_of_week = datetime.datetime.today().weekday() # int [0 - 6]
+
+        ## All done by user
+        p = session.query(Package.uid)
+        p = p.filter(Package.uid == Task.package_uid)
+        p = p.filter(Task.user_uid == user.uid)
+        p = p.filter(Task.createdat >= yesterday)
+        p = p.filter(Task.deletedat == None)
+        p = p.all()
+        
+        if p:
+            done_p = [i[0] for i in p]
+
+        q = session.query(Package)
+
+        # q = q.filter(Package.start_date_for_package <= now)
+        # q = q.filter(Package.end_date_for_package >= now)
+
+        q = q.filter(Package.deletedat == None)
+        q = q.filter(Package.accepted == True)
+        q = q.filter(Package.template == False)        
+
+        # Today's available from Packages
+        if day_of_week == 0: # monday
+            q = q.filter(Package.monday_to_advertise == True)
+        elif day_of_week == 1: # tuesday
+            q = q.filter(Package.tuesday_to_advertise == True)
+        elif day_of_week == 2: # wend
+            q = q.filter(Package.wednesday_to_advertise == True)
+        elif day_of_week == 3: # thursday
+            q = q.filter(Package.thursday_to_advertise == True)
+        elif day_of_week == 4: # friday
+            q = q.filter(Package.friday_to_advertise == True)
+        elif day_of_week == 5: # saturday
+            q = q.filter(Package.saturday_to_advertise == True)
+        elif day_of_week == 6: # sunday
+            q = q.filter(Package.sunday_to_advertise == True)
+        
+        if p == None or p == []:
+            pass
+        else:
+            ##### IMPORTANT!!! #####
+            # For this to work each Package needs to have at least 1 done task
+            # We do this by letting super on approve get a done task
+            # This way when he checks if link is valid it is counted as a view, or done task
+            ########################
+            s = session.query(
+                Task.package_uid, 
+                func.count('*').label('package_count')
+            )
+
+            ### Doesnt work for hours for whatever reason
+            yes = datetime.datetime.utcnow() - datetime.timedelta(days =1)
+
+            s = s.filter(Task.createdat>=yes)
+            s = s.group_by(Task.package_uid)
+
+            subquery = s.subquery('subquery')
+
+            s = session.query(
+                Task.package_uid, 
+                func.count('*').label('package_count_total')
+            )
+            s = s.group_by(Task.package_uid)
+            
+            subquery_tot = s.subquery('subquery_tot')
+
+            q = q.outerjoin(
+                subquery, 
+                and_(
+                    Package.uid==subquery.c.package_uid,
+                    Package.daily_number_of_clicks > subquery.c.package_count,
+                )
+            )
+
+            q = q.outerjoin(
+                subquery_tot, 
+                and_(
+                    Package.uid==subquery_tot.c.package_uid,
+                    Package.total_number_of_clicks > subquery_tot.c.package_count_total,
+                )
+            )            
+
+            # filter by not being in done tasks by user
+            q = q.filter(~Package.uid.in_(done_p))
+
+        q = q.order_by(Package.priority.desc())
+
+
+        result = q.first()
+        print('result',result)
+        if result:
+            res = result.object_to_dict()            
+        else:
+            res = None
+        
+        session.close()
+        return {
+            'result':res        
+        }
+        
+    except Exception as e:
+        traceback.print_exc()
+        error = e # or it may return "error"
+        session.close()
+        return {'error': error}
+

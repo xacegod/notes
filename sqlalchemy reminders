@@ -144,3 +144,12 @@ def get_count(q):
         q = q.filter(getattr(model_class, 'uid') == getattr(model_class, 'uid'))
 
 #####
+
+subquery = session.query(Task.package_uid, func.count('*').label('package_count')).group_by(Task.package_uid).subquery()
+qry = session.query(Package) \
+    .outerjoin((subquery, Package.uid == subquery.c.package_uid)) \
+    .order_by(Package.uid).filter(subquery.c.package_count >= 5)
+
+qry = qry.all()
+
+print(qry)

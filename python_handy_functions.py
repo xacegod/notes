@@ -58,7 +58,7 @@ loop.run_until_complete(get_users_for_import_from(url))
         return q.all()
 
 # called from route - api
-nodes = ClosureTable.get_nodes_from_closure_table_with_user_depth_from_to_and_plan(session, node.uid, from_depth, to_depth)
+nodes = ClosureTable.get_nodes_from_closure_table_with_user_depth(session, node.uid, from_depth, to_depth)
         
 result = []
 count = len(nodes)

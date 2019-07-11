@@ -3,3 +3,6 @@ SELECT t1.name
 FROM table1 t1
 LEFT JOIN table2 t2 ON t2.name = t1.name
 WHERE t2.name IS NULL
+
+
+select num,count(*) from list_dat group by num having count(*)>1

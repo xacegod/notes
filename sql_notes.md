@@ -6,3 +6,7 @@ WHERE t2.name IS NULL
 
 
 select num,count(*) from list_dat group by num having count(*)>1
+
+
+select id,min(time),max(time) from tab1 where id in (select broj from tab2 where something > '') group by id 
+having cast(substr(max(time),1,2) as int)-cast(substr(min(time),1,2) as int) > 1
